@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/logo.png" alt="Hardin Pilot Logo" width="600" />
+  <img src="logo.png" alt="Hardin Pilot Logo" width="600" />
 </div>
 
 # Hardin Pilot
