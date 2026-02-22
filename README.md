@@ -85,9 +85,9 @@ The first time you run `hardin`, an interactive wizard will launch to help you c
 hardin
 ```
 The wizard will ask you to choose between:
-1. **Google Gemini**: The default. Generous free tier via Google AI Studio. **Strongly Recommended**: This tool was exclusively vetted, QA'd, and optimized over hours of testing using the `gemini-2.5-pro` reasoning models.
-2. **OpenAI**: For those with ChatGPT/OpenAI API keys. (Experimental due to unverified JSON handling in complex scenarios).
-3. **Local / Custom API**: For offline, private AI (like LMStudio running on `http://localhost:1234/v1`) or alternative providers (like Groq or DeepSeek).
+1. **Google Gemini**: The default. Generous free tier via Google AI Studio. **Strongly Recommended**: This tool was exclusively vetted, QA'd, and optimized over hours of testing using the `gemini-2.5-flash` model (specifically utilizing its deep "thinking" capabilities). We highly advise sticking to Gemini for the best, most reliable output.
+2. **OpenAI**: For those with ChatGPT/OpenAI API keys. (Experimental/Untested: Other AI providers have not been rigorously tested and may behave unexpectedly).
+3. **Local / Custom API**: For offline, private AI (like LMStudio running on `http://localhost:1234/v1`) or alternative providers (like Groq or DeepSeek). (Experimental/Untested).
 
 The wizard will provide you the exact URL where you can generate the required API key based on your choice. Configurations are saved securely to `~/.hardin/config.json`.
 
