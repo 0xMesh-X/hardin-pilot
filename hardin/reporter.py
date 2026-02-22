@@ -1,27 +1,22 @@
-import shutil
+import os
 from datetime import datetime
 from pathlib import Path
-import os
 
+from PyPDF2 import PdfMerger
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch, mm
 from reportlab.platypus import (
-    SimpleDocTemplate,
-    Paragraph,
-    Spacer,
-    Table,
-    TableStyle,
-    PageBreak,
     HRFlowable,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
 )
-from PyPDF2 import PdfMerger
 
 from hardin.config import get_output_dir
 from hardin.exceptions import ReporterError
 from hardin.state import AnalysisResult
-
 
 BRAND_RED = colors.HexColor("#DC2626")
 BRAND_DARK = colors.HexColor("#1F2937")
@@ -211,7 +206,7 @@ def build_remediation_script(results: list[AnalysisResult]) -> str:
     if not all_commands:
         return ""
     full_script = " && \\\n".join(all_commands)
-    
+
     # Save the script to a constant location for later use
     script_path = get_output_dir().parent / ".hardin" / "last_remediation.sh"
     try:
@@ -220,10 +215,10 @@ def build_remediation_script(results: list[AnalysisResult]) -> str:
             f.write("#!/bin/bash\nset -e\n\n" + full_script + "\n")
         # Ensure it's executable and only readable by the owner
         os.chmod(script_path, 0o700)
-    except Exception as e:
+    except Exception:
         # We don't want to crash the whole run just because we couldn't save the convenience script
         pass
-        
+
     return full_script
 
 

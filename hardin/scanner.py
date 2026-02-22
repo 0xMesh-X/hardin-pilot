@@ -1,9 +1,5 @@
-import os
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-
-from hardin.exceptions import ScannerError
 
 KNOWN_SERVICE_PATHS: dict[str, list[str]] = {
     "ssh": ["/etc/ssh/sshd_config", "/etc/ssh/ssh_config"],
@@ -83,7 +79,7 @@ def _read_file_safe(path: str) -> str | None:
 
 
 def _scan_directory(dir_path: str) -> list[str]:
-    found = []
+    found: list[str] = []
     try:
         p = Path(dir_path)
         if not p.is_dir():

@@ -1,39 +1,41 @@
 import argparse
+import subprocess
 import sys
 import uuid
-import subprocess
-import os
 from datetime import datetime
 from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
-from rich.text import Text
 
-from hardin.config import (
-    get_api_key, set_api_key, load_config, get_output_dir,
-    set_model, set_provider, set_api_base
-)
-from hardin.scanner import run_full_scan, list_all_services, ServiceConfig
 from hardin.analyzer import analyze_service
+from hardin.config import (
+    get_api_key,
+    get_output_dir,
+    set_api_base,
+    set_api_key,
+    set_model,
+    set_provider,
+)
+from hardin.exceptions import AnalyzerError, APIRateLimitError, HardinError
 from hardin.reporter import (
+    build_remediation_script,
+    cleanup_temp_pdfs,
     generate_service_pdf,
     merge_pdfs,
-    cleanup_temp_pdfs,
-    build_remediation_script,
 )
+from hardin.scanner import ServiceConfig, list_all_services, run_full_scan
 from hardin.state import (
-    ScanState,
     AnalysisResult,
-    load_state,
-    save_state,
+    ScanState,
     clear_state,
-    mark_service_complete,
     is_service_completed,
+    load_state,
+    mark_service_complete,
+    save_state,
 )
-from hardin.exceptions import HardinError, AnalyzerError, APIRateLimitError
 
 console = Console()
 
@@ -52,6 +54,7 @@ BANNER = """
 
 from rich.prompt import IntPrompt
 
+
 def _prompt_api_key() -> str:
     console.print(Panel(
         "[yellow]Welcome to Hardin - First-Time Setup[/yellow]\n\n"
@@ -60,35 +63,35 @@ def _prompt_api_key() -> str:
         title="[bold]AI Configuration[/bold]",
         border_style="yellow",
     ))
-    
+
     console.print("  [1] [cyan]Google Gemini[/cyan] (Default, Free Tier Available)")
     console.print("  [2] [white]OpenAI[/white] (ChatGPT)")
     console.print("  [3] [green]Local / Custom API[/green] (LMStudio, Ollama, DeepSeek, Groq, etc)")
-    
+
     choice = IntPrompt.ask("\n[bold]Select an option[/bold]", choices=["1", "2", "3"], default=1)
-    
+
     if choice == 1:
         provider = "gemini"
         model = console.input("[bold cyan]Enter model name[/bold cyan] [dim](Default: gemini-2.5-flash)[/dim]: ").strip() or "gemini-2.5-flash"
         api_base = ""
         url_hint = "https://aistudio.google.com/apikey"
-        
+
     elif choice == 2:
         provider = "openai"
         model = console.input("[bold cyan]Enter model name[/bold cyan] [dim](Default: gpt-4o)[/dim]: ").strip() or "gpt-4o"
         api_base = ""
         url_hint = "https://platform.openai.com/api-keys"
-        
+
     else:
         provider = "openai" # Custom endpoints use the OpenAI python library
         console.print("\n[dim]For Local AI (like LMStudio), the base URL is usually http://localhost:1234/v1[/dim]")
         api_base = console.input("[bold cyan]Enter Custom API Base URL:[/bold cyan] ").strip()
         model = console.input("[bold cyan]Enter model name:[/bold cyan] ").strip() or "local-model"
         url_hint = "your local/custom provider dashboard (or set to 'local' for offline LLMs)"
-        
+
     console.print(f"\n[dim]Get your API key at: {url_hint}[/dim]")
     key = console.input("[bold cyan]Enter your API Key:[/bold cyan] ").strip()
-    
+
     if not key:
         if choice == 3 and "localhost" in api_base:
             console.print("[dim]No key provided. Defaulting to 'local' for local endpoint.[/dim]")
@@ -96,12 +99,12 @@ def _prompt_api_key() -> str:
         else:
             console.print("[red]No key provided. Exiting.[/red]")
             sys.exit(1)
-        
+
     set_provider(provider)
     set_model(model)
     set_api_base(api_base)
     set_api_key(key)
-    
+
     console.print("\n[green]✓ Configuration saved. Hardin is ready![/green]\n")
     return key
 
@@ -121,11 +124,11 @@ def _show_services(services: list[ServiceConfig]) -> None:
 def execute_pending_remediation() -> None:
     '''Executes the saved bash script from the previous scan.'''
     script_path = get_output_dir().parent / ".hardin" / "last_remediation.sh"
-    
+
     if not script_path.exists():
         console.print("[yellow]No pending remediation script found. Please run a full scan first.[/yellow]")
         return
-        
+
     console.print(Panel(
         f"[bold yellow]Executing pending auto-remediation from previous scan...[/bold yellow]\n\n"
         f"[dim]Reading: {script_path}[/dim]",
@@ -133,7 +136,7 @@ def execute_pending_remediation() -> None:
         border_style="red",
         padding=(1, 2),
     ))
-    
+
     try:
         subprocess.run(str(script_path), shell=True, check=True, executable='/bin/bash')
         console.print("\n[green bold]✓ Auto-remediation executed successfully![/green bold]")
@@ -203,7 +206,7 @@ def _run_scan(extra_paths: list[str] | None = None, resume: bool = True) -> None
                 pdf = generate_service_pdf(result, temp_dir)
                 temp_pdfs.append(pdf)
                 console.print(f"  [green]✓[/green] {svc.service_name}")
-            except APIRateLimitError as e:
+            except APIRateLimitError:
                 console.print(f"  [yellow]⚠ Rate limited on {svc.service_name}. State saved. Re-run to resume.[/yellow]")
                 save_state(state)
                 scan_completed = False
@@ -354,14 +357,14 @@ def main() -> None:
             set_api_base(args.set_api_base)
             console.print(f"[green]✓ API Base URL updated to '{args.set_api_base}'.[/green]")
             updated = True
-            
+
         if updated and not (args.list or args.scan is not None or args.no_resume):
             return
 
         if args.list:
             _list_services()
             return
-            
+
         if args.apply:
             execute_pending_remediation()
             return

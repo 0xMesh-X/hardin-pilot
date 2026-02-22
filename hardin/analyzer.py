@@ -4,9 +4,8 @@ import time
 
 from google import genai
 from openai import OpenAI
-import openai
 
-from hardin.config import get_api_key, get_model, get_provider, get_api_base
+from hardin.config import get_api_base, get_api_key, get_model, get_provider
 from hardin.exceptions import AnalyzerError, APIRateLimitError
 from hardin.scanner import ServiceConfig
 from hardin.state import AnalysisResult
@@ -53,12 +52,12 @@ def _build_prompt(service: ServiceConfig) -> str:
 def _parse_response(raw: str, service_name: str) -> AnalysisResult:
     result = AnalysisResult(service_name=service_name)
     cleaned = raw.strip()
-    
+
     # Often models with thinking enabled put JSON in markdown blocks
     json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', cleaned, re.DOTALL)
     if not json_match:
         # Fallback: look for the last big JSON object (skipping early thought blocks entirely)
-        # Using a greedy match from the last '{' matching up to the end usually fails if there's trailing text. 
+        # Using a greedy match from the last '{' matching up to the end usually fails if there's trailing text.
         # Find the last occurrence of something that looks like the main JSON wrapper.
         json_match = re.search(r'\{(?:[^{}]|(?R))*\}', cleaned, re.DOTALL) # Python re doesn't support recursive ?R, so we do simpler:
         matches = re.findall(r'\{.*\}', cleaned, re.DOTALL)
@@ -66,7 +65,7 @@ def _parse_response(raw: str, service_name: str) -> AnalysisResult:
             # Get the shortest match that starts near the end, or just search from the end
             last_bracket = cleaned.rfind('}')
             first_bracket = cleaned.rfind('{', 0, last_bracket)
-            
+
             # Since DOTALL is greedy, match from first { that encloses "service" or "findings"
             m = re.search(r'\{[^{]*"service"\s*:.*\}', cleaned, re.DOTALL)
             if m:
@@ -131,8 +130,8 @@ def analyze_service(service: ServiceConfig, max_retries: int = 3) -> AnalysisRes
     for attempt in range(max_retries):
         try:
             if provider == "gemini":
-                client = genai.Client(api_key=api_key)
-                response = client.models.generate_content(
+                gemini_client = genai.Client(api_key=api_key)
+                gemini_response = gemini_client.models.generate_content(
                     model=model_name,
                     contents=prompt,
                     config=genai.types.GenerateContentConfig(
@@ -145,14 +144,14 @@ def analyze_service(service: ServiceConfig, max_retries: int = 3) -> AnalysisRes
                         ),
                     ),
                 )
-                raw_text = response.text if response.text else ""
+                raw_text = gemini_response.text if gemini_response.text else ""
             elif provider == "openai":
-                client_kwargs = {"api_key": api_key}
                 if api_base:
-                    client_kwargs["base_url"] = api_base
-                client = OpenAI(**client_kwargs)
-                
-                response = client.chat.completions.create(
+                    openai_client = OpenAI(api_key=api_key, base_url=api_base)
+                else:
+                    openai_client = OpenAI(api_key=api_key)
+
+                openai_response = openai_client.chat.completions.create(
                     model=model_name,
                     messages=[
                         {"role": "system", "content": SYSTEM_PROMPT},
@@ -160,7 +159,7 @@ def analyze_service(service: ServiceConfig, max_retries: int = 3) -> AnalysisRes
                     ],
                     temperature=0.1,
                 )
-                raw_text = response.choices[0].message.content if response.choices and response.choices[0].message.content else ""
+                raw_text = openai_response.choices[0].message.content if openai_response.choices and openai_response.choices[0].message.content else ""
             else:
                 raise AnalyzerError(f"Unknown provider: {provider}", code="INVALID_PROVIDER")
 
