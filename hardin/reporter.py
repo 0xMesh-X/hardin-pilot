@@ -182,7 +182,6 @@ def _generate_cover_page(output_dir: Path) -> Path:
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     story.append(Paragraph(f"Generated: {now}", styles["HardinBody"]))
     story.append(Paragraph("Tool: Hardin Pilot v1.0.0", styles["HardinBody"]))
-    story.append(Paragraph("AI Model: Gemini 2.5 Pro", styles["HardinBody"]))
 
     doc.build(story)
     return filename
