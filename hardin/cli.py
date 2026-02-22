@@ -1,6 +1,7 @@
 import argparse
 import sys
 import uuid
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -119,7 +120,7 @@ def _show_services(services: list[ServiceConfig]) -> None:
     console.print()
 
 
-def _run_scan(extra_paths: list[str] | None = None, resume: bool = True) -> None:
+def _run_scan(extra_paths: list[str] | None = None, resume: bool = True, fix: bool = False) -> None:
     api_key = get_api_key()
     if not api_key:
         api_key = _prompt_api_key()
@@ -225,13 +226,27 @@ def _run_scan(extra_paths: list[str] | None = None, resume: bool = True) -> None
 
     if remediation_script:
         console.print()
-        console.print(Panel(
-            f"[bold yellow]Copy and paste the following command to fix all issues:[/bold yellow]\n\n"
-            f"[white]{remediation_script}[/white]",
-            title="[bold red]⚡ Auto-Remediation Command[/bold red]",
-            border_style="red",
-            padding=(1, 2),
-        ))
+        if fix:
+            console.print(Panel(
+                f"[bold yellow]Executing Auto-Remediation...[/bold yellow]\n\n"
+                f"[white]{remediation_script}[/white]",
+                title="[bold red]⚡ Applying Fixes[/bold red]",
+                border_style="red",
+                padding=(1, 2),
+            ))
+            try:
+                subprocess.run(remediation_script, shell=True, check=True, executable='/bin/bash')
+                console.print("\n[green bold]✓ Auto-remediation executed successfully![/green bold]")
+            except subprocess.CalledProcessError as e:
+                console.print(f"\n[red bold]✗ Remediation command failed with exit code {e.returncode}[/red bold]")
+        else:
+            console.print(Panel(
+                f"[bold yellow]Copy and paste the following command to fix all issues[/bold yellow] (or run with --fix):\n\n"
+                f"[white]{remediation_script}[/white]",
+                title="[bold red]⚡ Auto-Remediation Command[/bold red]",
+                border_style="red",
+                padding=(1, 2),
+            ))
     elif scan_completed:
         # Only print the success message if we actually finished scanning everything
         console.print("\n[green bold]No remediation needed. Your system looks secure! 🎉[/green bold]")
@@ -282,6 +297,11 @@ def main() -> None:
         "--no-resume",
         action="store_true",
         help="Start a fresh scan, ignoring any saved progress",
+    )
+    parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="Automatically execute the suggested remediation commands",
     )
     parser.add_argument(
         "--set-key",
@@ -336,6 +356,7 @@ def main() -> None:
         _run_scan(
             extra_paths=args.scan,
             resume=not args.no_resume,
+            fix=args.fix,
         )
 
     except KeyboardInterrupt:
