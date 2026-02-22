@@ -8,8 +8,8 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
-from rich.table import Table
 from rich.prompt import IntPrompt
+from rich.table import Table
 
 from hardin.analyzer import analyze_service
 from hardin.config import (

@@ -56,22 +56,14 @@ def _parse_response(raw: str, service_name: str) -> AnalysisResult:
     # Often models with thinking enabled put JSON in markdown blocks
     json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', cleaned, re.DOTALL)
     if not json_match:
-        # Fallback: look for the last big JSON object (skipping early thought blocks entirely)
-        # Using a greedy match from the last '{' matching up to the end usually fails if there's trailing text.
-        # Find the last occurrence of something that looks like the main JSON wrapper.
-        json_match = re.search(r'\{(?:[^{}]|(?R))*\}', cleaned, re.DOTALL) # Python re doesn't support recursive ?R, so we do simpler:
-        matches = re.findall(r'\{.*\}', cleaned, re.DOTALL)
-        if matches:
-            # Get the shortest match that starts near the end, or just search from the end
-            last_bracket = cleaned.rfind('}')
-            first_bracket = cleaned.rfind('{', 0, last_bracket)
+        # Fallback: find the first occurrence of `{"service"` or `{` and the last `}`.
+        start_idx = cleaned.find('{"service"')
+        if start_idx == -1:
+            start_idx = cleaned.find('{')
 
-            # Since DOTALL is greedy, match from first { that encloses "service" or "findings"
-            m = re.search(r'\{[^{]*"service"\s*:.*\}', cleaned, re.DOTALL)
-            if m:
-                json_string = m.group(0)
-            else:
-                json_string = matches[-1]
+        end_idx = cleaned.rfind('}')
+        if start_idx != -1 and end_idx != -1 and start_idx < end_idx:
+            json_string = cleaned[start_idx:end_idx+1]
         else:
             json_string = None
     else:
