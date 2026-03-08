@@ -1,8 +1,8 @@
 [project]
 name = "pyhardin"
-version = "2.0.2"
+version = "2.0.4"
 authors = [
-  { name="Meshari Faisal Alluhaybi", email="meshari.alluhaybi1@gmail.com" },
+    { name = "Meshari Faisal Alluhaybi", email = "meshari.alluhaybi1@gmail.com" },
 ]
 description = "AI-powered Linux security configuration auditor"
 readme = "README.md"
@@ -22,40 +22,44 @@ classifiers = [
     "Topic :: Security",
 ]
 dependencies = [
-    "google-genai>=1.0.0",
-    "openai>=1.0.0",
-    "reportlab>=4.0",
-    "PyPDF2>=3.0",
-    "rich>=13.0",
-    "pydantic>=2.0",
-    "certifi>=2024.0.0"
+    "google-genai>=1.66.0",
+    "openai>=2.26.0",
+    "reportlab>=4.4.10",
+    "PyPDF2>=3.0.1",
+    "rich>=14.3.3",
+    "pydantic>=2.12.5",
+    "certifi>=2026.2.25"
 ]
 
 [project.urls]
-Homepage = "https://github.com/0xMesh-X/hardin-pilot"
-Issues = "https://github.com/0xMesh-X/hardin-pilot/issues"
+Homepage = "https://github.com/alqinae/pyhardin"
+Repository = "https://github.com/alqinae/pyhardin.git"
+Documentation = "https://github.com/alqinae/pyhardin#readme"
+Issues = "https://github.com/alqinae/pyhardin/issues"
 
 [project.optional-dependencies]
 gui = [
-    "fastapi>=0.110.0",
-    "uvicorn>=0.27.0",
-    "jinja2>=3.0",
-    "python-multipart",
-    "aiofiles>=23.2.1"
+    "fastapi>=0.135.1",
+    "uvicorn>=0.41.0",
+    "jinja2>=3.1.6",
+    "python-multipart>=0.0.22",
+    "aiofiles>=25.1.0"
 ]
 
 [project.scripts]
-pyhardin = "hardin.cli:main"
+pyhardin = "pyhardin.cli:main"
 
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["hardin", "hardin.*"]
+include = ["pyhardin", "pyhardin.*"]
 
 [tool.setuptools.package-data]
-hardin = ["templates/*.html", "templates/partials/*.html"]
+"pyhardin.templates" = ["*.html"]
+"pyhardin.templates.partials" = ["*.html"]
+"pyhardin.static" = ["*.css", "*.ico"]
 
 [tool.ruff]
 line-length = 100
@@ -63,6 +67,3 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]

@@ -1,0 +1,507 @@
+<div>
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-2xl font-bold text-gray-800">Scan Results: <span
+                class="font-mono bg-gray-200 px-2 py-1 rounded">{{ state.scan_id }}</span></h3>
+        {% if state.scan_date %}
+        <span class="text-sm text-gray-500 font-mono ml-4">{{ state.scan_date }}</span>
+        {% endif %}
+        <div class="flex gap-2">
+            <button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm flex items-center gap-2" hx-confirm="Are you sure you want to execute these bash scripts as the current user?"
+                    hx-post="/apply"
+                    hx-swap="outerHTML">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"
+                          stroke-width="2">
+                    </path>
+                </svg>
+                Apply Fixes
+            </button>
+            <a class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm flex items-center gap-2" href="/download-pdf?scan_id={{ state.scan_id }}"
+               target="_blank">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"
+                          stroke-width="2">
+                    </path>
+                </svg>
+                PDF
+            </a>
+        </div>
+    </div>
+
+    {% set pending_count = state.results | selectattr("status", "equalto", "pending") | list | length %}
+    {% if pending_count > 0 %}
+    <div class="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-5 flex items-center justify-between shadow-sm">
+        <div>
+            <h4 class="text-sm font-bold text-yellow-800 tracking-wide uppercase">Review Phase</h4>
+            <p class="text-sm text-yellow-700 mt-1">There are <strong>{{ pending_count }}</strong> system prompts
+                awaiting LLM execution. Review them below before sending.</p>
+        </div>
+        <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2.5 rounded-lg font-bold transition-colors shadow-md flex items-center gap-2" hx-include="#settings-form" hx-post="/analyze-all"
+                hx-target="#scan-status">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                 xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                </path>
+            </svg>
+            Send All Prompts
+        </button>
+    </div>
+    {% endif %}
+
+    <div class="space-y-4">
+        {% if state.results and state.results|length > 1 %}
+        <div class="mb-6 overflow-hidden rounded-lg shadow ring-1 ring-black ring-opacity-5">
+            <table class="min-w-full divide-y divide-gray-300">
+                <thead class="bg-gray-50">
+                <tr>
+                    <th class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900" scope="col">Service
+                    </th>
+                    <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900" scope="col">Status</th>
+                    <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900" scope="col">Actions</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                {% for result in state.results %}
+                <tr>
+                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
+                        <a class="hover:text-blue-600 transition-colors"
+                           href="#service-{{ result.service_name }}">{{ result.service_name | upper }}</a>
+                    </td>
+                    <td class="whitespace-nowrap px-3 py-4 text-sm">
+                        {% if result.status == 'failed' %}
+                        <span
+                                class="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800">Error</span>
+                        {% elif result.status == 'pending' %}
+                        <span
+                                class="inline-flex rounded-full bg-yellow-100 px-2 text-xs font-semibold leading-5 text-yellow-800">Pending
+                                Review</span>
+                        {% elif result.remediation_commands %}
+                        <span
+                                class="inline-flex rounded-full bg-orange-100 px-2 text-xs font-semibold leading-5 text-orange-800">Action
+                                Needed</span>
+                        {% else %}
+                        <span
+                                class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Secure</span>
+                        {% endif %}
+                    </td>
+                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {% if result.status == 'pending' %}
+                        0 actions
+                        {% else %}
+                        {{ result.remediation_commands | length }} actions
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% for result in state.results %}
+        <div class="border rounded-lg overflow-hidden shadow-sm mt-8 scroll-mt-6 {% if result.status == 'failed' %}border-red-300{% elif result.remediation_commands %}border-orange-300{% else %}border-green-300{% endif %}"
+             id="service-{{ result.service_name }}">
+
+            <div class="group">
+                <div
+                        class="px-4 py-3 font-semibold flex justify-between items-center select-none transition-colors {% if result.status == 'failed' %}bg-red-50 text-red-800{% elif result.status == 'pending' %}bg-yellow-50 text-yellow-800{% elif result.remediation_commands %}bg-orange-50 text-orange-800{% else %}bg-green-50 text-green-800{% endif %} border-b {% if result.status == 'failed' %}border-red-200{% elif result.status == 'pending' %}border-yellow-200{% elif result.remediation_commands %}border-orange-200{% else %}border-green-200{% endif %}">
+                    <div class="flex items-center gap-2">
+                        <span>{{ result.service_name | upper }}</span>
+                    </div>
+
+                    {% if result.status == 'failed' %}
+                    <span
+                            class="text-xs bg-red-200 text-red-800 px-2 py-1 rounded-full uppercase tracking-wider">Error</span>
+                    {% elif result.status == 'pending' %}
+                    <span
+                            class="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded-full uppercase tracking-wider">Awaiting
+                        Execution</span>
+                    {% elif result.remediation_applied %}
+                    <span
+                            class="text-xs bg-green-600 text-white px-2 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="3">
+                            </path>
+                        </svg>
+                        Applied
+                    </span>
+                    {% elif result.remediation_commands %}
+                    <span
+                            class="text-xs bg-orange-200 text-orange-800 px-2 py-1 rounded-full uppercase tracking-wider">Action
+                        Needed</span>
+                    {% else %}
+                    <span
+                            class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full uppercase tracking-wider">Secure</span>
+                    {% endif %}
+                </div>
+
+                <div class="p-4 bg-white">
+
+                    {% if result.status == 'pending' %}
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-bold text-gray-500 uppercase tracking-wider">Target Scope (First
+                                350 chars)</span>
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm font-semibold transition-colors shadow-sm focus:ring-2 focus:ring-blue-500" hx-include="#settings-form"
+                                    hx-post="/analyze-service/{{ result.service_name }}"
+                                    hx-target="#scan-status">
+                                Send Prompt →
+                            </button>
+                        </div>
+                        <div class="bg-gray-100 rounded p-0 overflow-hidden shadow-inner border border-gray-200">
+                            <table class="min-w-full divide-y divide-gray-200 text-xs">
+                                <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="px-4 py-2 text-left font-bold text-gray-700 uppercase">Section</th>
+                                    <th class="px-4 py-2 text-left font-bold text-gray-700 uppercase">Content
+                                        Preview / Configuration
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-100">
+                                <tr>
+                                    <td class="px-4 py-2 font-bold bg-gray-50 w-40">Security Instructions</td>
+                                    <td class="px-4 py-2 text-gray-600 italic">Audit rules, system hardening
+                                        guidelines, and JSON output schema.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2 font-bold bg-gray-50">AI Target</td>
+                                    <td class="px-4 py-2">
+                                            <span class="font-mono text-blue-700 font-bold uppercase">{{ result.provider
+                                                }}</span>
+                                        <span class="mx-1 text-gray-300">|</span>
+                                        <span class="font-mono text-gray-600">{{ result.model }}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2 font-bold bg-gray-50">Inference Parameters</td>
+                                    <td class="px-4 py-2 font-mono text-gray-500">
+                                        Temp: <span class="text-orange-600">{{ result.temperature }}</span>
+                                        <span class="mx-2">/</span>
+                                        Max Tokens: <span class="text-orange-600">{{ result.max_tokens }}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2 font-bold bg-gray-50">Target Service</td>
+                                    <td class="px-4 py-2 font-mono text-indigo-700 font-bold">{{ result.service_name
+                                        | upper }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2 font-bold bg-gray-50">OS Context</td>
+                                    <td class="px-4 py-2 font-mono text-gray-600 whitespace-pre-wrap">{{
+                                        result.prompt.split('Server OS Context:\n')[1].split('\n\n')[0] if 'Server
+                                        OS Context:\n' in result.prompt else 'Unknown' }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2 font-bold bg-gray-50">Attached Configs</td>
+                                    <td class="px-4 py-2">
+                                        <div class="flex flex-wrap gap-1">
+                                            {% set files_found = [] %}
+                                            {% for line in result.prompt.split('\n') %}
+                                            {% if line.startswith('--- FILE: ') %}
+                                            <span
+                                                    class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-100 font-mono text-[10px]">{{
+                                                    line[10:-4] }}</span>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <div class="mt-1 text-[10px] text-gray-400">Total: {{
+                                            result.prompt.count('--- FILE:') }} files
+                                        </div>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <details class="mt-4 mb-2 text-xs group/full-table">
+                            <summary
+                                    class="cursor-pointer text-blue-600 hover:text-blue-800 outline-none font-semibold flex items-center gap-1 w-max">
+                                <svg class="w-3 h-3 transition-transform duration-200 group-open/full-table:rotate-90"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"
+                                          stroke-width="2"></path>
+                                </svg>
+                                VIEW FULL TABLE
+                            </summary>
+                            <div
+                                    class="mt-2 bg-gray-100 rounded p-0 overflow-hidden shadow-inner border border-gray-200">
+                                <table class="min-w-full divide-y divide-gray-200 text-xs text-left">
+                                    <thead class="bg-gray-200">
+                                    <tr>
+                                        <th class="px-3 py-2 font-bold text-gray-700 uppercase">Section</th>
+                                        <th class="px-3 py-2 font-bold text-gray-700 uppercase">Content</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-100">
+                                    <tr>
+                                        <td class="px-3 py-2 font-bold bg-gray-50 align-top w-40">AI Provider</td>
+                                        <td class="px-3 py-2 font-mono text-blue-700 font-bold uppercase">{{
+                                            result.provider or 'Unknown' }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-bold bg-gray-50 align-top">Model Used</td>
+                                        <td class="px-3 py-2 font-mono text-gray-600">{{ result.model or 'Unknown'
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-bold bg-gray-50 align-top">Inference Params</td>
+                                        <td class="px-3 py-2 font-mono text-gray-500">Temp: <span
+                                                class="text-orange-600">{{ result.temperature }}</span> / Max
+                                            Tokens: <span class="text-orange-600">{{ result.max_tokens }}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-bold bg-gray-50 align-top">Attached Configs</td>
+                                        <td class="px-3 py-2">
+                                            {% set parts = result.prompt.split('--- FILE: ') %}
+                                            {% for part in parts[1:] %}
+                                            {% set file_path = part.split(' ---', 1)[0] | trim %}
+                                            {% set content_tail = part.split(' ---', 1)[1] if ' ---' in part else ''
+                                            %}
+                                            {% set content = content_tail.split('--- END FILE:')[0] | trim %}
+                                            <details
+                                                    class="mb-2 bg-gray-50 border border-gray-200 rounded overflow-hidden">
+                                                <summary
+                                                        class="px-3 py-2 cursor-pointer font-mono font-bold text-indigo-700 hover:bg-gray-100 border-b border-gray-200">
+                                                    {{ file_path }}
+                                                </summary>
+                                                <div
+                                                        class="p-3 bg-gray-900 text-gray-300 font-mono text-[10px] whitespace-pre-wrap overflow-x-auto">
+                                                    {{- content -}}
+                                                </div>
+                                            </details>
+                                            {% endfor %}
+                                            {% if parts|length <= 1 %} <span class="text-gray-500 italic">No
+                                                    configuration files attached.</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+
+                        <details class="mt-2 text-xs group/raw-prompt">
+                            <summary
+                                    class="cursor-pointer text-gray-500 hover:text-gray-700 outline-none font-semibold flex items-center gap-1 w-max">
+                                <svg class="w-3 h-3 transition-transform duration-200 group-open/raw-prompt:rotate-90"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"
+                                          stroke-width="2"></path>
+                                </svg>
+                                VIEW FULL RAW PROMPT STRING
+                            </summary>
+                            <div
+                                    class="mt-2 bg-gray-900 text-gray-300 p-4 rounded border border-gray-700 font-mono text-[10px] whitespace-pre-wrap overflow-x-auto shadow-inner">
+                                {{ result.prompt }}
+                            </div>
+                        </details>
+                    </div>
+
+                    {% else %}
+
+                    {% if result.summary %}
+                    <p class="text-sm text-gray-700 mb-4 bg-gray-50 p-3 rounded-lg border">{{ result.summary }}</p>
+                    {% endif %}
+
+                    {% if result.findings is iterable and result.findings is not string %}
+                    <div class="overflow-x-auto mb-4 border rounded-lg shadow-sm">
+                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead class="bg-gray-50 text-gray-700">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-semibold">Issue Details</th>
+                                <th class="px-3 py-2 text-left font-semibold">Severity</th>
+                                <th class="px-3 py-2 text-left font-semibold">Current Value</th>
+                                <th class="px-3 py-2 text-left font-semibold">Recommended Value</th>
+                            </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 bg-white">
+                            {% for finding in result.findings %}
+                            <tr
+                                    class="{% if finding.severity == 'CRITICAL' %}bg-red-50 text-red-900{% elif finding.severity == 'HIGH' %}bg-orange-50 text-orange-900{% endif %} transition-colors">
+                                <td class="px-3 py-3">
+                                    <div class="font-bold mb-1">{{ finding.title }}</div>
+                                    <div class="text-xs text-gray-600 leading-relaxed">{{ finding.description }}
+                                    </div>
+                                </td>
+                                <td class="px-3 py-3 align-top">
+                                        <span class="px-2 py-1 text-[10px] font-bold rounded-full uppercase tracking-wide
+                                            {% if finding.severity == 'CRITICAL' %}bg-red-100 text-red-800 border border-red-200
+                                            {% elif finding.severity == 'HIGH' %}bg-orange-100 text-orange-800 border border-orange-200
+                                            {% elif finding.severity == 'MEDIUM' %}bg-yellow-100 text-yellow-800 border border-yellow-200
+                                            {% else %}bg-blue-100 text-blue-800 border border-blue-200{% endif %}">
+                                            {{ finding.severity }}
+                                        </span>
+                                </td>
+                                <td class="px-3 py-3 font-mono text-xs align-top break-all w-1/4">{{
+                                    finding.current_value }}
+                                </td>
+                                <td
+                                        class="px-3 py-3 font-mono text-xs align-top text-green-700 font-semibold break-all w-1/4">
+                                    {{ finding.recommended_value }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if not result.findings %}
+                            <tr>
+                                <td class="px-4 py-8 text-center text-gray-500 font-medium" colspan="4">No
+                                    configuration issues detected.
+                                </td>
+                            </tr>
+                            {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div
+                            class="text-sm font-mono whitespace-pre-wrap text-gray-700 bg-gray-50 p-4 rounded-lg border shadow-inner">
+                        {%- if result.findings -%}
+                        {{ result.findings }}
+                        {%- else -%}
+                        <span class="text-gray-400">No findings logged.</span>
+                        {%- endif -%}
+                    </div>
+                    {% endif %}
+
+                    {% if result.remediation_commands %}
+                    <div class="mt-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="text-sm font-bold text-gray-600 uppercase tracking-wider">Suggested Fixes</h4>
+                            {% if not result.remediation_applied %}
+                            <button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-bold transition-colors shadow-sm flex items-center gap-1" hx-confirm="Are you sure you want to apply these fixes for {{ result.service_name }}?"
+                                    hx-post="/apply-service/{{ result.service_name }}"
+                                    hx-target="closest .group">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"
+                                          stroke-width="2"></path>
+                                </svg>
+                                Apply Fix
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div
+                                class="bg-gray-900 rounded p-3 text-green-400 font-mono text-sm overflow-x-auto selection:bg-gray-700">
+                            {% for cmd in result.remediation_commands %}
+                            $ {{ cmd }}<br>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if result.prompt %}
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <details class="group/prompt-table mb-2">
+                            <summary
+                                    class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 cursor-pointer hover:text-gray-700 transition-colors flex items-center gap-1 w-max">
+                                <svg class="w-3 h-3 transition-transform duration-200 group-open/prompt-table:rotate-90"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"
+                                          stroke-width="2"></path>
+                                </svg>
+                                VIEW FULL TABLE
+                            </summary>
+                            <div
+                                    class="mt-2 bg-gray-100 rounded p-0 overflow-hidden shadow-inner border border-gray-200">
+                                <table class="min-w-full divide-y divide-gray-200 text-xs text-left">
+                                    <thead class="bg-gray-200">
+                                    <tr>
+                                        <th class="px-3 py-2 font-bold text-gray-700 uppercase">Section</th>
+                                        <th class="px-3 py-2 font-bold text-gray-700 uppercase">Audit Configuration
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-100">
+                                    <tr>
+                                        <td class="px-3 py-2 font-bold bg-gray-50 align-top w-40">AI Provider</td>
+                                        <td class="px-3 py-2 font-mono text-blue-700 font-bold uppercase">{{
+                                            result.provider or 'Unknown' }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-bold bg-gray-50 align-top">Model Used</td>
+                                        <td class="px-3 py-2 font-mono text-gray-600">{{ result.model or 'Unknown'
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-bold bg-gray-50 align-top">Inference Params</td>
+                                        <td class="px-3 py-2 font-mono text-gray-500">Temp: <span
+                                                class="text-orange-600">{{ result.temperature }}</span> / Max
+                                            Tokens: <span class="text-orange-600">{{ result.max_tokens }}</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-bold bg-gray-50 align-top">Target Service</td>
+                                        <td class="px-3 py-2 font-mono text-indigo-700 font-bold uppercase">{{
+                                            result.service_name }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-bold bg-gray-50 align-top">Attached Configs</td>
+                                        <td class="px-3 py-2">
+                                            {% set parts = result.prompt.split('--- FILE: ') %}
+                                            {% for part in parts[1:] %}
+                                            {% set file_path = part.split(' ---', 1)[0] | trim %}
+                                            {% set content_tail = part.split(' ---', 1)[1] if ' ---' in part else ''
+                                            %}
+                                            {% set content = content_tail.split('--- END FILE:')[0] | trim %}
+                                            <details
+                                                    class="mb-2 bg-gray-50 border border-gray-200 rounded overflow-hidden">
+                                                <summary
+                                                        class="px-3 py-2 cursor-pointer font-mono font-bold text-indigo-700 hover:bg-gray-100 border-b border-gray-200">
+                                                    {{ file_path }}
+                                                </summary>
+                                                <div
+                                                        class="p-3 bg-gray-900 text-gray-300 font-mono text-[10px] whitespace-pre-wrap overflow-x-auto">
+                                                    {{- content -}}
+                                                </div>
+                                            </details>
+                                            {% endfor %}
+                                            {% if parts|length <= 1 %} <span class="text-gray-500 italic">No
+                                                    configuration files attached.</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+
+
+                        <details class="group/prompt">
+                            <summary
+                                    class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 cursor-pointer hover:text-gray-700 transition-colors flex items-center gap-1 w-max">
+                                <svg class="w-3 h-3 transition-transform duration-200 group-open/prompt:rotate-90"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"
+                                          stroke-width="2"></path>
+                                </svg>
+                                VIEW FULL RAW PROMPT STRING
+                            </summary>
+                            <div
+                                    class="bg-gray-100 rounded p-3 text-gray-600 font-mono text-[10px] overflow-x-auto whitespace-pre-wrap">
+                                {{ result.prompt }}
+                            </div>
+                        </details>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>

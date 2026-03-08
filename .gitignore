@@ -6,6 +6,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+uv.lock
+Pipfile
+Pipfile.lock
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -35,9 +38,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Hardin specific
-.hardin/
-hardin_reports/
+# Pyhardin specific
+.pyhardin/
+pyhardin_reports/
 
 # Agent/AI metadata
 .gemini/

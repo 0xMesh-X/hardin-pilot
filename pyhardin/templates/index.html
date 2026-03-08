@@ -3,10 +3,10 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hardin - Security Auditor</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Pyhardin - Security Auditor</title>
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link href="/static/favicon.ico" rel="icon" type="image/x-icon">
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <!-- Tailwind CSS -->
@@ -33,11 +33,12 @@
             <h1 class="text-5xl font-extrabold text-red-600 mb-2 font-mono flex items-center gap-4">
                 <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                     xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                    <path
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                        stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
                     </path>
                 </svg>
-                HARDIN PILOT
+                PYHARDIN
             </h1>
             <p class="text-gray-500">AI-Powered Linux Security Configuration Auditor</p>
         </header>
@@ -56,28 +57,33 @@
             <div class="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200 shadow-sm">
                 <h3 class="text-xl font-bold mb-4 text-gray-800">Configuration Settings</h3>
                 <div id="settings-status"></div>
-                <form id="settings-form" hx-post="/settings" hx-target="#settings-status" class="space-y-4">
+                <form class="space-y-4" hx-post="/settings" hx-target="#settings-status" id="settings-form">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">AI Provider</label>
-                            <select name="provider" id="provider-select" onchange="updateModelOptions()" required
-                                class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3">
+                            <select
+                                class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3"
+                                id="provider-select" name="provider" onchange="updateModelOptions()" required>
                                 <option value="" disabled {% if not current_provider %}selected{% endif %}>Select AI
-                                    Provider...</option>
+                                    Provider...
+                                </option>
                                 <option value="gemini" {% if current_provider=='gemini' %}selected{% endif %}>Google
-                                    Gemini</option>
+                                    Gemini
+                                </option>
                                 <option value="openai" {% if current_provider=='openai' %}selected{% endif %}>OpenAI (or
-                                    Local)</option>
+                                    Local)
+                                </option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Model Name</label>
-                            <input type="text" name="model" id="model-input"
-                                list="model-options-{% if current_provider == 'openai' %}openai{% else %}gemini{% endif %}"
-                                value="{% if current_provider %}{{ current_model }}{% endif %}"
+                            <input autocomplete="off"
                                 class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 disabled:bg-gray-100 disabled:text-gray-500"
+                                {% if not current_provider %}disabled{% endif %} id="model-input"
+                                list="model-options-{% if current_provider == 'openai' %}openai{% else %}gemini{% endif %}"
+                                name="model"
                                 placeholder="{% if current_provider == 'openai' %}e.g. gpt-4o{% else %}e.g. gemini-2.5-flash{% endif %}"
-                                autocomplete="off" {% if not current_provider %}disabled{% endif %} required>
+                                required type="text" value="{% if current_provider %}{{ current_model }}{% endif %}">
                             <datalist id="model-options-gemini">
                                 <!-- Gemini Models -->
                                 <option value="gemini-3.1-pro"></option>
@@ -108,36 +114,42 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
                             <div class="relative">
-                                <input type="password" id="api-key-input" name="api_key" value="{{ current_api_key }}"
+                                <input
                                     class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 pl-3 pr-10"
-                                    placeholder="Enter your API key">
-                                <button type="button" onclick="toggleApiKey()"
-                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
-                                    <svg id="api-key-icon-show" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                                        stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    id="api-key-input" name="api_key" placeholder="Enter your API key" type="password"
+                                    value="{{ current_api_key }}">
+                                <button
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                                    onclick="toggleApiKey()" type="button">
+                                    <svg class="h-5 w-5" fill="none" id="api-key-icon-show" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round"
+                                            stroke-linejoin="round" stroke-width="2" />
+                                        <path
+                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
                                     </svg>
-                                    <svg id="api-key-icon-hide" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24"
-                                        stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                    <svg class="h-5 w-5 hidden" fill="none" id="api-key-icon-hide" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path
+                                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
                                     </svg>
                                 </button>
                             </div>
                         </div>
-                        <div id="base-url-container" class="{% if current_provider != 'openai' %}hidden{% endif %}">
+                        <div class="{% if current_provider != 'openai' %}hidden{% endif %}" id="base-url-container">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Base URL (Local API
                                 Override)</label>
-                            <input type="url" name="api_base" id="api-base-input" value="{{ current_api_base }}"
+                            <input
                                 class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3"
-                                placeholder="e.g. http://localhost:1234/v1">
+                                id="api-base-input" name="api_base" placeholder="e.g. http://localhost:1234/v1"
+                                type="url" value="{{ current_api_base }}">
                         </div>
                     </div>
-                    <button type="submit"
-                        class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm">
+                    <button
+                        class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm"
+                        type="submit">
                         Save Settings
                     </button>
                 </form>
@@ -146,43 +158,46 @@
             <div class="flex justify-between items-center border-b pb-4 mb-6">
                 <h2 class="text-3xl font-bold text-gray-800">System Dashboard</h2>
                 <div class="flex gap-2">
-                    <button onclick="expandAllScans()"
-                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors shadow-sm flex items-center gap-1">
+                    <button
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors shadow-sm flex items-center gap-1"
+                        onclick="expandAllScans()">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
                             </path>
                         </svg>
                         Expand All
                     </button>
-                    <button onclick="collapseAllScans()"
-                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors shadow-sm flex items-center gap-1">
+                    <button
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors shadow-sm flex items-center gap-1"
+                        onclick="collapseAllScans()">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7">
+                            <path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
                             </path>
                         </svg>
                         Collapse All
                     </button>
-                    <button hx-post="/clear-state" hx-target="#scan-results" hx-swap="innerHTML"
-                        hx-confirm="Are you sure you want to delete all scan history?"
-                        class="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm">
+                    <button
+                        class="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm"
+                        hx-confirm="Are you sure you want to delete all scan history?" hx-post="/clear-state"
+                        hx-swap="innerHTML" hx-target="#scan-results">
                         Clear History
                     </button>
-                    <button id="run-scan-btn" hx-post="/scan" hx-target="#scan-status" hx-include="#settings-form" {% if
-                        not has_api_key or scan_in_progress %}disabled
+                    <button {% if not has_api_key or scan_in_progress %}disabled
                         class="bg-gray-400 text-white px-6 py-2 rounded-lg font-semibold cursor-not-allowed" {% else
                         %}class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors shadow-sm"
-                        {% endif %}>
+                        {% endif %} hx-include="#settings-form" hx-post="/scan" hx-target="#scan-status"
+                        id="run-scan-btn">
                         Run Security Scan
                     </button>
                 </div>
             </div>
 
             <!-- Status Container -->
-            <div id="scan-status" class="mb-8">
+            <div class="mb-8" id="scan-status">
                 {% if scan_in_progress %}
-                <div hx-get="/status" hx-trigger="load" hx-swap="outerHTML">
+                <div hx-get="/status" hx-swap="outerHTML" hx-trigger="load">
                     Loading status...
                 </div>
                 {% endif %}
@@ -203,7 +218,7 @@
                             <svg class="w-6 h-6 transition-transform duration-200 group-open:rotate-90 {% if has_errors %}text-red-400{% elif state.is_complete %}text-green-400{% else %}text-yellow-400{% endif %}"
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                                <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
                                 </path>
                             </svg>
                             <div class="flex items-center gap-3">
@@ -226,14 +241,15 @@
                             {% endif %}
                             <span class="text-xs font-mono opacity-60 tracking-tighter">{% if state.scan_date %}{{
                                 state.scan_date }}{% else %}Legacy Scan{% endif %}</span>
-                            <button hx-delete="/scan/{{ state.scan_id }}"
+                            <button class="text-gray-400 hover:text-red-600 transition-colors tooltip"
                                 hx-confirm="Are you sure you want to delete this scan?"
-                                hx-target="closest .scan-details" hx-swap="outerHTML" onclick="event.stopPropagation()"
-                                class="text-gray-400 hover:text-red-600 transition-colors tooltip" title="Delete Scan">
+                                hx-delete="/scan/{{ state.scan_id }}" hx-swap="outerHTML"
+                                hx-target="closest .scan-details" onclick="event.stopPropagation()" title="Delete Scan">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                     xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                    <path
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                        stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
                                     </path>
                                 </svg>
                             </button>
@@ -297,12 +313,16 @@
 
         function expandAllScans() {
             const details = document.querySelectorAll('details.scan-details');
-            details.forEach(d => { d.open = true; });
+            details.forEach(d => {
+                d.open = true;
+            });
         }
 
         function collapseAllScans() {
             const details = document.querySelectorAll('details.scan-details');
-            details.forEach(d => { d.open = false; });
+            details.forEach(d => {
+                d.open = false;
+            });
         }
     </script>
 </body>
