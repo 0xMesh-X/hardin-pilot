@@ -12,6 +12,7 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.prompt import IntPrompt, Prompt
 from rich.table import Table
 
+from pyhardin import __version__
 from pyhardin.analyzer import analyze_service, build_prompt
 from pyhardin.config import (
     get_model,
@@ -45,7 +46,7 @@ from pyhardin.state import (
 
 console = Console()
 
-BANNER = """
+BANNER = f"""
 [bold red]
   ██╗  ██╗ █████╗ ██████╗ ██████╗ ██╗███╗   ██╗
   ██║  ██║██╔══██╗██╔══██╗██╔══██╗██║████╗  ██║
@@ -54,7 +55,7 @@ BANNER = """
   ██║  ██║██║  ██║██║  ██║██████╔╝██║██║ ╚████║
   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝
 [/bold red]
-[dim]  AI-Powered Linux Security Auditor v2.0.0[/dim]
+[dim]  AI-Powered Linux Security Auditor v{__version__}[/dim]
 """
 
 
