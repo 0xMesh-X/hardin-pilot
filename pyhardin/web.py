@@ -11,14 +11,15 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-import hardin.config
-from hardin.analyzer import analyze_service, build_prompt
-from hardin.cli import (
+import pyhardin.config
+from pyhardin.analyzer import analyze_service, build_prompt
+from pyhardin.cli import (
     console,
     execute_pending_remediation,
     execute_service_remediation,
 )
-from hardin.config import (
+from pyhardin.config import (
+    get_api_base,
     get_api_key,
     get_model,
     get_output_dir,  # Added
@@ -27,9 +28,9 @@ from hardin.config import (
     set_model,
     set_provider,
 )
-from hardin.exceptions import APIRateLimitError  # Added
-from hardin.scanner import run_full_scan
-from hardin.state import (
+from pyhardin.exceptions import APIRateLimitError  # Added
+from pyhardin.scanner import run_full_scan
+from pyhardin.state import (
     AnalysisResult,
     ScanState,
     clear_state,
@@ -39,7 +40,7 @@ from hardin.state import (
     save_state,
 )
 
-hardin.config.CURRENT_CONTEXT = "web"
+pyhardin.config.CURRENT_CONTEXT = "web"
 
 # We define the Jinja templates directory relative to this file
 BASE_DIR = Path(__file__).parent
@@ -47,14 +48,15 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 security = HTTPBasic()
 
+
 def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
     correct_username = secrets.compare_digest(
         credentials.username.encode("utf8"),
-        os.environ.get("HARDIN_WEB_USER", "admin").encode("utf8")
+        os.environ.get("PYHARDIN_WEB_USER", "admin").encode("utf8")
     )
     correct_password = secrets.compare_digest(
         credentials.password.encode("utf8"),
-        os.environ.get("HARDIN_WEB_PASS", "admin").encode("utf8")
+        os.environ.get("PYHARDIN_WEB_PASS", "admin").encode("utf8")
     )
     if not (correct_username and correct_password):
         raise HTTPException(
@@ -64,12 +66,13 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
         )
     return credentials.username
 
-app = FastAPI(title="Hardin Dashboard", dependencies=[Depends(verify_credentials)])
+
+app = FastAPI(title="Pyhardin Dashboard", dependencies=[Depends(verify_credentials)])
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 # Global variables to track background scan progress
 _scan_state: ScanState | None = None
-_scan_task_running = False # Renamed from _scan_in_progress
+_scan_task_running = False  # Renamed from _scan_in_progress
 _scan_progress_msg = ""
 _scan_completed_count = 0
 _scan_total_count = 0
@@ -114,19 +117,21 @@ def clear_state_endpoint(_auth: bool = Depends(verify_credentials)) -> HTMLRespo
         '</div>'
     )
 
+
 @app.delete("/scan/{scan_id}")
 def delete_scan_endpoint(scan_id: str, _auth: bool = Depends(verify_credentials)) -> HTMLResponse:
     if delete_state(scan_id):
         return HTMLResponse("")
     raise HTTPException(status_code=404, detail="Scan not found")
 
+
 @app.post("/settings", response_class=HTMLResponse)
 async def update_settings(
-    request: Request,
-    api_key: str = Form(""),
-    provider: str = Form(""),
-    model: str = Form(""),
-    api_base: str = Form("")
+        request: Request,
+        api_key: str = Form(""),
+        provider: str = Form(""),
+        model: str = Form(""),
+        api_base: str = Form("")
 ):
     """Update API settings from the web GUI."""
     if api_key:
@@ -158,6 +163,7 @@ async def update_settings(
         '</button>'
     )
 
+
 @app.get("/download-pdf", response_class=FileResponse)
 async def download_pdf(scan_id: str = None):
     """Download the generated PDF report for a specific scan."""
@@ -170,24 +176,26 @@ async def download_pdf(scan_id: str = None):
 
     if target_state:
         _generate_scan_pdf(target_state)
-        
+
     output_dir = get_output_dir()
     if not output_dir.exists():
         return HTMLResponse("No reports directory found.", status_code=404)
 
     if scan_id:
-        pdf_path = output_dir / f"hardin_report_{scan_id}.pdf"
+        pdf_path = output_dir / f"pyhardin_report_{scan_id}.pdf"
         if pdf_path.exists():
             return FileResponse(
                 path=pdf_path,
                 filename=pdf_path.name,
                 media_type="application/pdf"
             )
-        return HTMLResponse(f"No PDF reports available for scan {scan_id} (ensure at least one service completed).", status_code=404)
+        return HTMLResponse(f"No PDF reports available for scan {scan_id} (ensure at least one service completed).",
+                            status_code=404)
 
-    pdfs = list(output_dir.glob("hardin_report_*.pdf"))
+    pdfs = list(output_dir.glob("pyhardin_report_*.pdf"))
     if not pdfs:
-        return HTMLResponse("No PDF reports available (at least one service must be completely analyzed).", status_code=404)
+        return HTMLResponse("No PDF reports available (at least one service must be completely analyzed).",
+                            status_code=404)
 
     # Sort by modification time to get the latest
     latest_pdf = max(pdfs, key=lambda p: p.stat().st_mtime)
@@ -201,12 +209,12 @@ async def download_pdf(scan_id: str = None):
 
 @app.post("/scan", response_class=HTMLResponse)
 async def trigger_scan(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    api_key: str = Form(""),
-    provider: str = Form(""),
-    model: str = Form(""),
-    api_base: str = Form(""),
+        request: Request,
+        background_tasks: BackgroundTasks,
+        api_key: str = Form(""),
+        provider: str = Form(""),
+        model: str = Form(""),
+        api_base: str = Form(""),
 ):
     """Trigger a background scan via HTMX."""
     global _scan_task_running
@@ -219,7 +227,7 @@ async def trigger_scan(
         set_model(model.strip())
     if api_base:
         set_api_base(api_base.strip())
-    
+
     if _scan_task_running:
         return templates.TemplateResponse(
             "partials/status.html",
@@ -248,7 +256,7 @@ async def get_status(request: Request):
 
     if not _scan_task_running:
         # Upon completion or generic pause (e.g. rate limit), tell HTMX to fully reload the page
-        # so the standard index.html loop organically reconstructs all tables and states accurately
+        # so the standard index.html loop organically reconstructs all tables and states accurately.
         return HTMLResponse(
             '<div class="bg-blue-100 border-l-4 border-blue-500 p-4 mb-6">\n'
             '    <div class="flex items-center">\n'
@@ -259,7 +267,7 @@ async def get_status(request: Request):
             headers={"HX-Refresh": "true"}
         )
 
-    # Ongoing scan
+    # Ongoing scan.
     pct = 0
     if _scan_total_count > 0:
         pct = int((_scan_completed_count / _scan_total_count) * 100)
@@ -354,8 +362,8 @@ def _generate_scan_pdf(latest: ScanState):
     try:
         import tempfile
         from pathlib import Path
-        from hardin.reporter import generate_service_pdf, merge_pdfs
-        
+        from pyhardin.reporter import generate_service_pdf, merge_pdfs
+
         temp_dir = Path(tempfile.mkdtemp())
         temp_pdfs = []
         for r in latest.results:
@@ -363,11 +371,11 @@ def _generate_scan_pdf(latest: ScanState):
                 pdf = generate_service_pdf(r, temp_dir)
                 if pdf and pdf.exists():
                     temp_pdfs.append(pdf)
-        
+
         if temp_pdfs:
             output_dir = get_output_dir()
             output_dir.mkdir(parents=True, exist_ok=True)
-            final_pdf = output_dir / f"hardin_report_{latest.scan_id}.pdf"
+            final_pdf = output_dir / f"pyhardin_report_{latest.scan_id}.pdf"
             merge_pdfs(temp_pdfs, final_pdf)
             console.log(f"[bold green]Report saved to:[/bold green] {final_pdf}")
     except Exception as e:
@@ -376,15 +384,15 @@ def _generate_scan_pdf(latest: ScanState):
 
 @app.post("/analyze-all", response_class=HTMLResponse)
 async def trigger_analyze_all(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    api_key: str = Form(""),
-    provider: str = Form(""),
-    model: str = Form("")
+        request: Request,
+        background_tasks: BackgroundTasks,
+        api_key: str = Form(""),
+        provider: str = Form(""),
+        model: str = Form("")
 ):
     """Trigger background LLM execution for all pending prompts."""
     global _scan_task_running
-    
+
     if api_key:
         set_api_key(api_key.strip())
     if provider in ["gemini", "openai"]:
@@ -499,11 +507,11 @@ async def _run_background_llm():
 
 @app.post("/analyze-service/{service_name}", response_class=HTMLResponse)
 async def trigger_analyze_service(
-    service_name: str,
-    request: Request,
-    api_key: str = Form(""),
-    provider: str = Form(""),
-    model: str = Form("")
+        service_name: str,
+        request: Request,
+        api_key: str = Form(""),
+        provider: str = Form(""),
+        model: str = Form("")
 ):
     """Trigger the LLM strictly for one specific pending service via HTMX from the UI."""
     global _scan_task_running
@@ -557,7 +565,7 @@ async def trigger_analyze_service(
             save_state(latest)
         console.log(f"[green]✓[/green] Successfully analyzed {service_name} individually.")
 
-        # Trigger a full page refresh via header so the HTMX handles collapsing correctly
+        # Trigger a full page refresh via header so the HTMX handles collapsing correctly.
         return HTMLResponse(
             "",
             headers={"HX-Refresh": "true"}
@@ -593,11 +601,11 @@ async def trigger_analyze_service(
 async def apply_remediation(request: Request):
     """Executes the pending remediation bash script generated by the last scan."""
     try:
-        # Run the exact same CLI command function to apply fixes
-        # We run it synchronously by offloading it to a thread so it doesn't block the async loop
+        # Run the exact same CLI command function to apply fixes.
+        # We run it synchronously by offloading it to a thread so it doesn't block the async loop.
         await asyncio.to_thread(execute_pending_remediation)
 
-        # execution success (or handled correctly by the function)
+        # Execution success (or handled correctly by the function).
         return HTMLResponse(
             '<div class="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">\n'
             '    <strong>✓ Fixes Applied Successfully!</strong> The remediation script '
@@ -616,10 +624,10 @@ async def apply_remediation(request: Request):
 async def apply_service_remediation(service_name: str, request: Request):
     """Executes remediation only for a specific service."""
     try:
-        # Offload synchronous subprocess execution to a thread
+        # Offload synchronous subprocess execution to a thread.
         await asyncio.to_thread(execute_service_remediation, service_name)
 
-        # Return a success message or trigger a refresh
+        # Return a success message or trigger a refresh.
         return HTMLResponse(
             "",
             headers={"HX-Refresh": "true"}
@@ -630,4 +638,3 @@ async def apply_service_remediation(service_name: str, request: Request):
             f'  <strong>Error applying fix for {service_name}:</strong> {e}\n'
             f'</div>'
         )
-

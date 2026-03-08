@@ -7,18 +7,18 @@
     <p>{{ msg }}</p>
 </div>
 <!-- Tell HTMX to fetch the final results and swap out the results container -->
-<div hx-get="/status" hx-trigger="load" hx-target="#scan-results" hx-swap="innerHTML" class="hidden"></div>
+<div class="hidden" hx-get="/status" hx-swap="innerHTML" hx-target="#scan-results" hx-trigger="load"></div>
 {% else %}
 <!-- Transition State -->
 <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 flex items-center shadow-sm">
-    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
-        viewBox="0 0 24 24">
+    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24"
+         xmlns="http://www.w3.org/2000/svg">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+        <path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              fill="currentColor">
         </path>
     </svg>
-    <div class="text-blue-700 font-medium w-full" hx-get="/status" hx-trigger="load delay:1s" hx-swap="outerHTML">
+    <div class="text-blue-700 font-medium w-full" hx-get="/status" hx-swap="outerHTML" hx-trigger="load delay:1s">
         {{ msg }}
     </div>
 </div>

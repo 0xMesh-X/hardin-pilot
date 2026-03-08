@@ -1,21 +1,9 @@
 name: pyhardin
 channels:
-  - conda-forge
   - defaults
+  - conda-forge
 dependencies:
-  - python>=3.10
-  - pydantic>=2.0
-  - fastapi>=0.110.0
-  - uvicorn>=0.27.0
-  - jinja2>=3.0
-  - python-multipart
-  - rich>=13.0
-  - reportlab>=4.0
-  - certifi>=2024.0.0
-  - pypdf2>=3.0
-  - aiofiles>=23.2.1
+  - python=3.10
   - pip
   - pip:
-      - google-genai>=1.0.0
-      - openai>=1.0.0
       - -e .
