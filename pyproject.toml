@@ -1,6 +1,6 @@
 [project]
 name = "pyhardin"
-version = "2.0.1"
+version = "2.0.2"
 authors = [
   { name="Meshari Faisal Alluhaybi", email="meshari.alluhaybi1@gmail.com" },
 ]
@@ -30,6 +30,10 @@ dependencies = [
     "pydantic>=2.0",
     "certifi>=2024.0.0"
 ]
+
+[project.urls]
+Homepage = "https://github.com/0xMesh-X/hardin-pilot"
+Issues = "https://github.com/0xMesh-X/hardin-pilot/issues"
 
 [project.optional-dependencies]
 gui = [
