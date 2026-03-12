@@ -5,7 +5,6 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import urlparse
 
 from rich.console import Console
 from rich.panel import Panel
@@ -270,10 +269,8 @@ def _run_scan(extra_paths: list[str] | None = None, resume_id: str | None = None
 
     api_key = get_api_key()
     api_base = get_api_base()
-    if not api_key:
-        parsed_host = urlparse(api_base).hostname or "" if api_base else ""
-        if parsed_host not in ("localhost", "127.0.0.1", "::1"):
-            _prompt_api_key()
+    if not api_key and not api_base:
+        _prompt_api_key()
 
     services = run_full_scan(extra_paths)
     if not services:

@@ -1,6 +1,6 @@
 [project]
 name = "pyhardin"
-version = "2.0.4"
+version = "2.0.5"
 authors = [
     { name = "Meshari Faisal Alluhaybi", email = "meshari.alluhaybi1@gmail.com" },
 ]
