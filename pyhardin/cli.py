@@ -15,6 +15,8 @@ from rich.table import Table
 from pyhardin import __version__
 from pyhardin.analyzer import analyze_service, build_prompt
 from pyhardin.config import (
+    get_api_base,
+    get_api_key,
     get_model,
     get_output_dir,
     get_provider,
@@ -264,6 +266,11 @@ def execute_service_remediation(service_name: str) -> None:
 
 def _run_scan(extra_paths: list[str] | None = None, resume_id: str | None = None, resume: bool = True) -> None:
     console.print(BANNER)
+
+    api_key = get_api_key()
+    api_base = get_api_base()
+    if not api_key and not api_base:
+        _prompt_api_key()
 
     services = run_full_scan(extra_paths)
     if not services:
