@@ -1,6 +1,6 @@
 [project]
 name = "pyhardin"
-version = "2.0.5"
+version = "2.0.6"
 authors = [
     { name = "Meshari Faisal Alluhaybi", email = "meshari.alluhaybi1@gmail.com" },
 ]
@@ -32,10 +32,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/alqinae/pyhardin"
-Repository = "https://github.com/alqinae/pyhardin.git"
-Documentation = "https://github.com/alqinae/pyhardin#readme"
-Issues = "https://github.com/alqinae/pyhardin/issues"
+Homepage = "https://github.com/0xMesh-X/hardin-pilot"
+Documentation = "https://github.com/0xMesh-X/hardin-pilot#readme"
+Repository = "https://github.com/0xMesh-X/hardin-pilot.git"
+Issues = "https://github.com/0xMesh-X/hardin-pilot/issues"
+Changelog = "https://github.com/0xMesh-X/hardin-pilot/blob/main/CHANGES.md"
 
 [project.optional-dependencies]
 gui = [
